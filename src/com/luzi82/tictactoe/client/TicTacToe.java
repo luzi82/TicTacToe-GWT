@@ -4,6 +4,7 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.RootPanel;
@@ -20,6 +21,10 @@ public class TicTacToe implements EntryPoint {
 			+ "attempting to contact the server. Please check your network "
 			+ "connection and try again.";
 
+	public static int TYPE_AI_FIRST = 0;
+	public static int TYPE_PLAYER_FIRST = 1;
+	public static int TYPE_PVP = 2;
+
 	/**
 	 * Create a remote service proxy to talk to the server-side Greeting
 	 * service.
@@ -35,6 +40,9 @@ public class TicTacToe implements EntryPoint {
 	final String O = "res/O.png";
 	final String _ = "res/_.png";
 
+	int type;
+	int turn;
+
 	/**
 	 * This is the entry point method.
 	 */
@@ -42,13 +50,42 @@ public class TicTacToe implements EntryPoint {
 		for (int i = 0; i < 3; ++i) {
 			for (int j = 0; j < 3; ++j) {
 				cellPanel[i][j] = RootPanel.get("cell" + i + j);
-				cellValue[i][j] = 0;
 				cellImg[i][j] = new Image(_);
 				cellButton[i][j] = new PushButton(cellImg[i][j], CLICKHANDLER);
-
 				cellPanel[i][j].add(cellButton[i][j]);
 			}
 		}
+
+		RootPanel controlPanel = RootPanel.get("control");
+		HorizontalPanel controlPanelH = new HorizontalPanel();
+
+		PushButton pvpBtn = new PushButton("PVP", new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				reset(TYPE_PVP);
+			}
+		});
+		controlPanelH.add(pvpBtn);
+
+		PushButton aiFirst = new PushButton("AI First", new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				reset(TYPE_AI_FIRST);
+			}
+		});
+		controlPanelH.add(aiFirst);
+
+		PushButton playerFirst = new PushButton("Player First",
+				new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						reset(TYPE_PLAYER_FIRST);
+					}
+				});
+		controlPanelH.add(playerFirst);
+		controlPanel.add(controlPanelH);
+
+		reset(TYPE_PVP);
 
 		// final Button sendButton = new Button("Send");
 		// final TextBox nameField = new TextBox();
@@ -162,9 +199,58 @@ public class TicTacToe implements EntryPoint {
 		// nameField.addKeyUpHandler(handler);
 	}
 
+	void move(int x, int y, int side) {
+		if (cellValue[x][y] != 0) {
+			return;
+		}
+		cellValue[x][y] = side;
+		switch (side) {
+		case 1:
+			cellImg[x][y].setUrl(X);
+			break;
+		case 2:
+			cellImg[x][y].setUrl(O);
+			break;
+		}
+		++turn;
+		if (isAiMove()) {
+			aiMove();
+		}
+	}
+
+	void reset(int type) {
+		this.type = type;
+		this.turn = 0;
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < 3; ++j) {
+				cellValue[i][j] = 0;
+				cellImg[i][j].setUrl(_);
+			}
+		}
+		if (isAiMove()) {
+			aiMove();
+		}
+	}
+
+	boolean isAiMove() {
+		if ((type == TYPE_AI_FIRST) && ((turn & 1) == 0)) {
+			return true;
+		} else if ((type == TYPE_PLAYER_FIRST) && ((turn & 1) != 0)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	void aiMove() {
+
+	}
+
 	final ClickHandler CLICKHANDLER = new ClickHandler() {
 		@Override
 		public void onClick(ClickEvent event) {
+			if (isAiMove())
+				return;
 			PushButton button = (PushButton) event.getSource();
 			int myI = -1, myJ = -1;
 			for (int i = 0; i < 3; ++i) {
@@ -175,19 +261,7 @@ public class TicTacToe implements EntryPoint {
 					}
 				}
 			}
-			cellValue[myI][myJ]++;
-			cellValue[myI][myJ] %= 3;
-			switch (cellValue[myI][myJ]) {
-			case 0:
-				cellImg[myI][myJ].setUrl(_);
-				break;
-			case 1:
-				cellImg[myI][myJ].setUrl(X);
-				break;
-			case 2:
-				cellImg[myI][myJ].setUrl(O);
-				break;
-			}
+			move(myI, myJ, ((turn & 1) == 0) ? 1 : 2);
 		}
 	};
 
