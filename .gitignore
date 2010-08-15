@@ -1,2 +1,4 @@
 *.class
 war/tictactoe/
+war/WEB-INF/classes/
+TicTacToe.war
