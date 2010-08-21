@@ -2,3 +2,5 @@
 war/tictactoe/
 war/WEB-INF/classes/
 TicTacToe.war
+www-test/
+tomcat/

@@ -4,10 +4,12 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.RootPanel;
+import com.luzi82.tictactoe.shared.XY;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -29,8 +31,8 @@ public class TicTacToe implements EntryPoint {
 	 * Create a remote service proxy to talk to the server-side Greeting
 	 * service.
 	 */
-	private final GreetingServiceAsync greetingService = GWT
-			.create(GreetingService.class);
+	private final TicTacToeServiceAsync tictactoeService = GWT
+			.create(TicTacToeService.class);
 
 	int[][] cellValue = new int[3][3];
 	RootPanel[][] cellPanel = new RootPanel[3][3];
@@ -42,6 +44,7 @@ public class TicTacToe implements EntryPoint {
 
 	int type;
 	int turn;
+	int win;
 
 	/**
 	 * This is the entry point method.
@@ -200,6 +203,9 @@ public class TicTacToe implements EntryPoint {
 	}
 
 	void move(int x, int y, int side) {
+		if (win != 0) {
+			return;
+		}
 		if (cellValue[x][y] != 0) {
 			return;
 		}
@@ -212,6 +218,7 @@ public class TicTacToe implements EntryPoint {
 			cellImg[x][y].setUrl(O);
 			break;
 		}
+		win = winner();
 		++turn;
 		if (isAiMove()) {
 			aiMove();
@@ -221,6 +228,7 @@ public class TicTacToe implements EntryPoint {
 	void reset(int type) {
 		this.type = type;
 		this.turn = 0;
+		this.win = 0;
 		for (int i = 0; i < 3; ++i) {
 			for (int j = 0; j < 3; ++j) {
 				cellValue[i][j] = 0;
@@ -233,7 +241,9 @@ public class TicTacToe implements EntryPoint {
 	}
 
 	boolean isAiMove() {
-		if ((type == TYPE_AI_FIRST) && ((turn & 1) == 0)) {
+		if (win != 0) {
+			return false;
+		} else if ((type == TYPE_AI_FIRST) && ((turn & 1) == 0)) {
 			return true;
 		} else if ((type == TYPE_PLAYER_FIRST) && ((turn & 1) != 0)) {
 			return true;
@@ -243,7 +253,49 @@ public class TicTacToe implements EntryPoint {
 	}
 
 	void aiMove() {
+		tictactoeService.move(turnToSide(turn), cellValue,
+				new AsyncCallback<XY>() {
+					@Override
+					public void onSuccess(XY result) {
+						move(result.x, result.y, turnToSide(turn));
+					}
+					@Override
+					public void onFailure(Throwable caught) {
+					}
+				});
+	}
 
+	int winner() {
+		int t;
+		for (int i = 0; i < 3; ++i) {
+			t = winTest(i, 0, 0, 1);
+			if (t != 0) {
+				return t;
+			}
+			t = winTest(0, i, 1, 0);
+			if (t != 0) {
+				return t;
+			}
+		}
+		t = winTest(0, 0, 1, 1);
+		if (t != 0) {
+			return t;
+		}
+		t = winTest(0, 2, 1, -1);
+		if (t != 0) {
+			return t;
+		}
+		return 0;
+	}
+
+	int winTest(int x, int y, int dx, int dy) {
+		if (cellValue[x][y] != cellValue[x + dx][y + dy]) {
+			return 0;
+		}
+		if (cellValue[x][y] != cellValue[x + dx + dx][y + dy + dy]) {
+			return 0;
+		}
+		return cellValue[x][y];
 	}
 
 	final ClickHandler CLICKHANDLER = new ClickHandler() {
@@ -261,8 +313,12 @@ public class TicTacToe implements EntryPoint {
 					}
 				}
 			}
-			move(myI, myJ, ((turn & 1) == 0) ? 1 : 2);
+			move(myI, myJ, turnToSide(turn));
 		}
 	};
+
+	int turnToSide(int turn) {
+		return ((turn & 1) == 0) ? 1 : 2;
+	}
 
 }
